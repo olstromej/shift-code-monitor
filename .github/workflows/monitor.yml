@@ -28,11 +28,12 @@ jobs:
           TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
         run: |
           python3 twitter_shift_scraper.py
-          # Save a copy of the seen tweets log as an artifact
+          # Copy seen tweets to a log artifact
           cp seen_tweets.txt shift_codes_log.txt
 
       - name: Upload SHiFT codes log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: shift-codes-log
           path: shift_codes_log.txt
+          retention-days: 30  # Optional: keep artifact for 30 days
