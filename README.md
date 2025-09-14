@@ -17,15 +17,6 @@ Never miss a SHiFT code or Golden Key! Monitor Twitter accounts and automaticall
 
 ---
 
-## 🖥️ Demo
-
-**Example Discord notification:**  
-
-![Discord Demo](docs/discord_demo.png)  
-*(Replace with your actual screenshot if you want)*
-
----
-
 ## 🛠️ Setup
 
 1. **Clone the repo:**
