@@ -1,46 +1,57 @@
 import tweepy
 import requests
 import os
-import time
 from dotenv import load_dotenv
 from tweepy.errors import TooManyRequests
+from datetime import datetime
 
 # Load environment variables from .env
 load_dotenv()
 
-# Discord webhook and Twitter credentials
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
-# Twitter accounts and keywords to monitor
 ACCOUNTS = ["GearboxOfficial", "Borderlands"]
 KEYWORDS = ["shift code", "golden key", "redeem code"]
 
-# File to keep track of already seen tweets
 SEEN_TWEETS_FILE = "seen_tweets.txt"
+LOG_FILE = "shift_codes_log.txt"
 
-# Load seen tweets from file
+# Load seen tweet IDs
 if os.path.exists(SEEN_TWEETS_FILE):
     with open(SEEN_TWEETS_FILE, "r") as f:
         seen_tweets = set(line.strip() for line in f.readlines())
 else:
     seen_tweets = set()
 
+# Load logged tweet IDs to avoid duplicates
+logged_tweet_ids = set()
+if os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r") as f:
+        for line in f:
+            # Each line format: [timestamp] username: tweet_text
+            if line.strip():
+                # Optional: store tweet ID if you include it in log
+                # For safety, we can use seen_tweets only
+                pass
+
 # Initialize Tweepy client
 client = tweepy.Client(bearer_token=BEARER_TOKEN)
 
 def save_seen_tweet(tweet_id):
-    """Save a tweet ID to the seen_tweets set and file."""
     seen_tweets.add(str(tweet_id))
     with open(SEEN_TWEETS_FILE, "a") as f:
         f.write(f"{tweet_id}\n")
 
+def log_shift_code(username, tweet_id, tweet_text):
+    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    with open(LOG_FILE, "a") as f:
+        f.write(f"[{timestamp}] {username} ({tweet_id}): {tweet_text}\n")
+
 def contains_keyword(text):
-    """Check if a tweet contains any of the keywords."""
     return any(keyword.lower() in text.lower() for keyword in KEYWORDS)
 
 def send_to_discord(username, tweet):
-    """Send detected SHiFT code tweet to Discord."""
     content = (
         f"**New SHiFT Code Detected!**\n"
         f"Account: {username}\n"
@@ -54,31 +65,32 @@ def send_to_discord(username, tweet):
         print(f"Failed to send: {tweet.id}, Status Code: {response.status_code}")
 
 def fetch_shift_codes():
-    """Fetch the latest tweet from monitored accounts and send new SHiFT codes to Discord."""
     for username in ACCOUNTS:
         try:
             user = client.get_user(username=username)
             if not user.data:
                 continue
 
-            # Only get the latest tweet
             tweets = client.get_users_tweets(user.data.id, max_results=1)
             if not tweets.data:
                 continue
 
-            tweet = tweets.data[0]  # latest tweet
-            if str(tweet.id) not in seen_tweets and contains_keyword(tweet.text):
-                send_to_discord(username, tweet)
-                save_seen_tweet(tweet.id)
+            tweet = tweets.data[0]
+            tweet_id_str = str(tweet.id)
+
+            if tweet_id_str not in seen_tweets:
+                if contains_keyword(tweet.text):
+                    send_to_discord(username, tweet)
+                    save_seen_tweet(tweet.id)
+                    log_shift_code(username, tweet.id, tweet.text)
+                else:
+                    # Still mark as seen to avoid reprocessing
+                    save_seen_tweet(tweet.id)
 
         except TooManyRequests:
-            print(f"Rate limit hit for {username}. Waiting 15 minutes...")
-            time.sleep(15 * 60)  # wait 15 minutes
+            print(f"Rate limit hit for {username}. Skipping this run.")
         except Exception as e:
             print(f"Error fetching tweets for {username}: {e}")
 
 if __name__ == "__main__":
-    while True:
-        fetch_shift_codes()
-        print("Sleeping for 5 minutes before checking again...")
-        time.sleep(300)  # check every 5 minutes
+    fetch_shift_codes()
