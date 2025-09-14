@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from tweepy.errors import TooManyRequests
 from datetime import datetime
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -17,23 +17,16 @@ KEYWORDS = ["shift code", "golden key", "redeem code"]
 SEEN_TWEETS_FILE = "seen_tweets.txt"
 LOG_FILE = "shift_codes_log.txt"
 
-# Load seen tweet IDs
-if os.path.exists(SEEN_TWEETS_FILE):
-    with open(SEEN_TWEETS_FILE, "r") as f:
-        seen_tweets = set(line.strip() for line in f.readlines())
-else:
-    seen_tweets = set()
+# Ensure files exist
+if not os.path.exists(SEEN_TWEETS_FILE):
+    open(SEEN_TWEETS_FILE, 'w').close()
 
-# Load logged tweet IDs to avoid duplicates
-logged_tweet_ids = set()
-if os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "r") as f:
-        for line in f:
-            # Each line format: [timestamp] username: tweet_text
-            if line.strip():
-                # Optional: store tweet ID if you include it in log
-                # For safety, we can use seen_tweets only
-                pass
+if not os.path.exists(LOG_FILE):
+    open(LOG_FILE, 'w').close()
+
+# Load seen tweets
+with open(SEEN_TWEETS_FILE, "r") as f:
+    seen_tweets = set(line.strip() for line in f.readlines())
 
 # Initialize Tweepy client
 client = tweepy.Client(bearer_token=BEARER_TOKEN)
@@ -71,21 +64,18 @@ def fetch_shift_codes():
             if not user.data:
                 continue
 
-            tweets = client.get_users_tweets(user.data.id, max_results=1)
+            tweets = client.get_users_tweets(user.data.id, max_results=5)
             if not tweets.data:
                 continue
 
-            tweet = tweets.data[0]
+            tweet = tweets.data[0]  # most recent tweet only
             tweet_id_str = str(tweet.id)
 
             if tweet_id_str not in seen_tweets:
                 if contains_keyword(tweet.text):
                     send_to_discord(username, tweet)
-                    save_seen_tweet(tweet.id)
                     log_shift_code(username, tweet.id, tweet.text)
-                else:
-                    # Still mark as seen to avoid reprocessing
-                    save_seen_tweet(tweet.id)
+                save_seen_tweet(tweet.id)
 
         except TooManyRequests:
             print(f"Rate limit hit for {username}. Skipping this run.")
