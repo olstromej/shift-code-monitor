@@ -9,8 +9,8 @@ load_dotenv()
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
-# Twitter accounts to monitor (added ShiftCodesTK)
-ACCOUNTS = ["GearboxOfficial", "Borderlands", "ShiftCodesTK"]
+# Twitter accounts to monitor
+ACCOUNTS = ["GearboxOfficial", "Borderlands", "ShiftCodesTK", "dgShiftCodes", "bordernetworker"]
 KEYWORDS = ["shift code", "golden key", "redeem code"]
 
 SEEN_TWEETS_FILE = "seen_tweets.txt"
