@@ -2,13 +2,12 @@ name: monitor
 
 on:
   schedule:
-    - cron: "0 13 * * *"  # Runs every day at 13:00 UTC (8 AM EST)
-  workflow_dispatch:        # Allows manual triggering
+    - cron: "0 13 * * *"  # 8 AM EST
+  workflow_dispatch:
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 

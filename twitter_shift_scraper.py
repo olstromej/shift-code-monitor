@@ -3,11 +3,20 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load .env if exists
 load_dotenv()
 
+# Use env vars from GitHub Actions or .env
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
-BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
+BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN") or os.getenv("BEARER_TOKEN")
+
+if not BEARER_TOKEN:
+    print("❌ Error: Twitter Bearer Token not found!")
+    exit(1)
+
+if not DISCORD_WEBHOOK_URL:
+    print("❌ Error: Discord Webhook URL not found!")
+    exit(1)
 
 ACCOUNTS = ["GearboxOfficial", "Borderlands", "BorderlandsGame", "ShiftCodesTK", "DuvalMagic"]
 KEYWORDS = ["shift code", "golden key", "redeem code"]
@@ -16,19 +25,18 @@ SEEN_TWEETS_FILE = "seen_tweets.txt"
 SEEN_TEXT_FILE = "seen_texts.txt"
 
 # Load seen tweet IDs
+seen_tweets = set()
 if os.path.exists(SEEN_TWEETS_FILE):
     with open(SEEN_TWEETS_FILE, "r") as f:
         seen_tweets = set(line.strip() for line in f.readlines())
-else:
-    seen_tweets = set()
 
 # Load seen tweet texts
+seen_texts = set()
 if os.path.exists(SEEN_TEXT_FILE):
     with open(SEEN_TEXT_FILE, "r") as f:
         seen_texts = set(line.strip() for line in f.readlines())
-else:
-    seen_texts = set()
 
+# Initialize Tweepy client
 client = tweepy.Client(bearer_token=BEARER_TOKEN)
 
 def save_seen_tweet(tweet_id, tweet_text):
@@ -60,6 +68,7 @@ def fetch_shift_codes():
         try:
             user = client.get_user(username=username)
             if not user.data:
+                print(f"⚠️ User {username} not found.")
                 continue
 
             tweets = client.get_users_tweets(user.data.id, max_results=5)
@@ -67,15 +76,16 @@ def fetch_shift_codes():
                 continue
 
             for tweet in tweets.data:
-                # Check both tweet ID and content to avoid duplicates
                 if (str(tweet.id) not in seen_tweets) and (tweet.text not in seen_texts) and contains_keyword(tweet.text):
                     send_to_discord(username, tweet)
                     save_seen_tweet(tweet.id, tweet.text)
 
         except tweepy.TooManyRequests:
             print(f"⚠️ Rate limit hit for {username}. Skipping this run.")
+        except tweepy.errors.Unauthorized:
+            print(f"❌ Unauthorized access for {username}. Check your Bearer Token.")
         except Exception as e:
-            print(f"Error fetching tweets for {username}: {e}")
+            print(f"⚠️ Error fetching tweets for {username}: {e}")
 
 if __name__ == "__main__":
     fetch_shift_codes()
