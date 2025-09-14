@@ -36,10 +36,11 @@ def save_seen_tweet(tweet_id):
     with open(SEEN_TWEETS_FILE, "a") as f:
         f.write(f"{tweet_id}\n")
 
-def log_shift_code(username, tweet_id, tweet_text):
+def log_shift_code(message):
+    """Append a message to the log file with timestamp."""
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     with open(LOG_FILE, "a") as f:
-        f.write(f"[{timestamp}] {username} ({tweet_id}): {tweet_text}\n")
+        f.write(f"[{timestamp}] {message}\n")
 
 def contains_keyword(text):
     return any(keyword.lower() in text.lower() for keyword in KEYWORDS)
@@ -68,19 +69,23 @@ def fetch_shift_codes():
             if not tweets.data:
                 continue
 
-            tweet = tweets.data[0]  # most recent tweet only
+            tweet = tweets.data[0]  # most recent tweet
             tweet_id_str = str(tweet.id)
 
             if tweet_id_str not in seen_tweets:
                 if contains_keyword(tweet.text):
                     send_to_discord(username, tweet)
-                    log_shift_code(username, tweet.id, tweet.text)
+                    log_shift_code(f"{username} ({tweet.id}): {tweet.text}")
                 save_seen_tweet(tweet.id)
 
         except TooManyRequests:
-            print(f"Rate limit hit for {username}. Skipping this run.")
+            message = f"Rate limit hit for {username}. Skipping this run."
+            print(message)
+            log_shift_code(message)
         except Exception as e:
-            print(f"Error fetching tweets for {username}: {e}")
+            message = f"Error fetching tweets for {username}: {e}"
+            print(message)
+            log_shift_code(message)
 
 if __name__ == "__main__":
     fetch_shift_codes()
