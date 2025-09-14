@@ -19,7 +19,26 @@ if not DISCORD_WEBHOOK_URL:
     exit(1)
 
 ACCOUNTS = ["GearboxOfficial", "Borderlands", "BorderlandsGame", "ShiftCodesTK", "DuvalMagic"]
-KEYWORDS = ["shift code", "golden key", "redeem code"]
+KEYWORDS = [
+    "shift code",
+    "SHiFT code",
+    "golden key",
+    "redeem code",
+    "codes",
+    "bonus loot",
+    "loot code",
+    "special code",
+    "promo code",
+    "free keys",
+    "borderlands code",
+    "unlock",
+    "vault hunter",
+    "key code",
+    "gearbox code",
+    "shift rewards",
+    "redeemable"
+]
+
 
 SEEN_TWEETS_FILE = "seen_tweets.txt"
 SEEN_TEXT_FILE = "seen_texts.txt"
