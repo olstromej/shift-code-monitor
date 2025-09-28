@@ -1,9 +1,10 @@
 import tweepy
 import requests
 import os
+import time
 from dotenv import load_dotenv
 
-# Load .env file if present (for local testing)
+# Load .env file if present
 load_dotenv()
 
 # Grab secrets from environment variables
@@ -56,6 +57,7 @@ def send_to_discord(username, tweet, text):
 def fetch_shift_codes():
     """Fetch tweets and post any new SHiFT codes to Discord."""
     for username in ACCOUNTS:
+        delay = 3  # default delay between accounts
         try:
             print(f"🔍 Checking {username}...")
             user = client.get_user(username=username)
@@ -63,7 +65,8 @@ def fetch_shift_codes():
                 print(f"⚠️ User {username} not found.")
                 continue
 
-            tweets = client.get_users_tweets(user.data.id, max_results=5)
+            # Fetch only the most recent tweet
+            tweets = client.get_users_tweets(user.data.id, max_results=1)
             if not tweets.data:
                 print(f"ℹ️ No tweets found for {username}.")
                 continue
@@ -73,11 +76,15 @@ def fetch_shift_codes():
                     send_to_discord(username, tweet, tweet.text)
 
         except tweepy.TooManyRequests:
-            print(f"⚠️ Rate limit hit for {username}. Skipping this run.")
+            print(f"⚠️ Rate limit hit for {username}. Skipping this account and waiting 30 seconds before next.")
+            delay = 30  # increase delay if rate-limited
         except tweepy.errors.Unauthorized:
             print(f"❌ Unauthorized access for {username}. Check your Bearer Token.")
         except Exception as e:
             print(f"⚠️ Error fetching tweets for {username}: {e}")
+
+        # Delay before checking the next account
+        time.sleep(delay)
 
 if __name__ == "__main__":
     fetch_shift_codes()
