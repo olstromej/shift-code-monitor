@@ -2,6 +2,7 @@
 import os
 import requests
 import time
+import re
 from datetime import datetime
 
 # ------------------------
@@ -22,14 +23,15 @@ ACCOUNTS = [
 MAX_RESULTS = 10  # between 5 and 100
 SLEEP_BETWEEN_ACCOUNTS = 31  # seconds
 
+# Regex pattern for Shift Codes (example: XXXX-XXXX-XXXX-XXXX)
+SHIFT_CODE_PATTERN = re.compile(r'\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b')
+
 # ------------------------
 # Helper functions
 # ------------------------
 def fetch_tweets(username):
     url = f"https://api.twitter.com/2/tweets/search/recent"
-    headers = {
-        "Authorization": f"Bearer {TWITTER_BEARER_TOKEN}"
-    }
+    headers = {"Authorization": f"Bearer {TWITTER_BEARER_TOKEN}"}
     query = {
         "query": f"from:{username}",
         "max_results": MAX_RESULTS,
@@ -39,21 +41,28 @@ def fetch_tweets(username):
     response = requests.get(url, headers=headers, params=query)
     
     if response.status_code == 429:
-        # Rate limit hit
         raise Exception("RateLimitError")
     elif response.status_code != 200:
         raise Exception(f"Error {response.status_code}: {response.text}")
     
     return response.json()
 
+def extract_shift_codes(text):
+    return SHIFT_CODE_PATTERN.findall(text)
+
 def log_shift_codes(account, tweets):
+    found = False
     if "data" in tweets:
         for tweet in tweets["data"]:
             text = tweet["text"].replace("\n", " ")
-            created_at = tweet["created_at"]
-            print(f"[{created_at}] {account}: {text}")
-    else:
-        print(f"No recent tweets for {account}")
+            codes = extract_shift_codes(text)
+            if codes:
+                found = True
+                created_at = tweet["created_at"]
+                for code in codes:
+                    print(f"[{created_at}] {account}: {code}")
+    if not found:
+        print(f"No shift codes found for {account}")
 
 # ------------------------
 # Main loop
