@@ -22,8 +22,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install tweepy requests python-dotenv
 
-      # Restore seen_tweets.txt from previous run
-      - name: Download previous seen tweets
+      # Restore seen files from previous run
+      - name: Download previous seen files
         uses: actions/download-artifact@v4
         with:
           name: shift-codes-seen
@@ -39,11 +39,13 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python3 twitter_shift_scraper.py | tee shift_codes_log.txt
 
-      - name: Save seen tweets
+      - name: Save seen files
         uses: actions/upload-artifact@v4
         with:
           name: shift-codes-seen
-          path: seen_tweets.txt
+          path: |
+            seen_tweets.txt
+            seen_texts.txt
 
       - name: Save log
         uses: actions/upload-artifact@v4
